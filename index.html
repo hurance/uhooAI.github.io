@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<meta name="renderer" content="webkit">
+		<meta name="force-rendering" content="webkit">
+		<meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1">
+		<meta name="format-detection" content="telephone=no,telephone=no,email=no,adress=no">
+		<meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests" />
+		<meta name="viewport" content="width=device-width,user-scalable=no,initial-scale=1.0,maximum-scale=1.0,minimum-scale=1.0">
+		<script type="text/javascript" src="./js/EventEmitter.min.js"></script>
+		<script type="text/javascript" src="./js/roslib.min.js"></script>
+		<script type="text/javascript" src="http://static.robotwebtools.org/EaselJS/current/easeljs.min.js"></script>
+		<script type="text/javascript" src="./js/ros2d.min.js"></script>
+		<script src="./js/jquery-2.1.1.min.js" type="text/javascript"></script>
+		<script src="./js/bootstrap.min.js"></script>s
+		<script src="./js/swiper.min.js"></script>
+		<script src="./js/ros3d.js"></script>
+		<script type="text/javascript" type="text/javascript">
+	/*********************IP登录********************************/
+			var ros = new ROSLIB.Ros({
+			url : 'ws://192.168.2.66:9090'  //43 66
+			//url : 'ws://192.168.ZZ090'
+			});
+			 
+			 ros.on('connection', function() {
+			 console.log('Connected to websocket server.');
+			 });
+			  
+			 ros.on('error', function(error) {
+			 console.log('Error connecting to websocket server: ', error);
+			 });
+			  
+			 ros.on('close', function() {
+			 console.log('Connection to websocket server closed.');
+			 });
+	/*********************IP登录********************************/
+	/*********************电池********************************/		 
+			var listener = new ROSLIB.Topic({
+			ros : ros,
+			name : '/battery',
+			messageType : 'std_msgs/String'
+			});
+			listener.subscribe(function(message) {
+			document.getElementById("outputt1").innerHTML = message.data.slice(2,4)+"%";
+			document.getElementById("outputt2").innerHTML = message.data.slice(2,4)+"%";
+			var batdiv1 = document.getElementById("batterydiv1");
+			var batdiv2 = document.getElementById("batterydiv2");
+			batdiv1.style.width = message.data.slice(2,4)+"%";
+			batdiv2.style.width = message.data.slice(2,4)+"%";
+			})
+	/*********************电池********************************/
+	/*********************温度********************************/
+			 var listenertemperature = new ROSLIB.Topic({
+			 ros : ros,
+			 name : 'temperature',
+			 messageType : 'std_msgs/Float32'
+			 });
+			 listenertemperature.subscribe(function(message) {
+			 document.getElementById("Temperature1").innerHTML = ('当前温度：'+message.data.toFixed(1)+"°");
+			 document.getElementById("Temperature2").innerHTML = ('当前温度：'+message.data.toFixed(1)+"°");
+			 })
+	/*********************温度********************************/		 
+	/*********************全屏********************************/	
+			 var elem = document.documentElement;		 
+			 function openFullscreen() {
+			   if (elem.requestFullscreen) {
+			     elem.requestFullscreen();
+			   } else if (elem.mozRequestFullScreen) { /* Firefox */
+			     elem.mozRequestFullScreen();
+			   } else if (elem.webkitRequestFullscreen) { /* Chrome, Safari & Opera */
+			     elem.webkitRequestFullscreen();
+			   } else if (elem.msRequestFullscreen) { /* IE/Edge */
+			     elem.msRequestFullscreen();
+			   }
+			 }
+	/*********************全屏********************************/		 
+	/*********************遥控********************************/	 
+	var cmdVel = new ROSLIB.Topic({
+	ros : ros,
+	name : '/cmd_vel',
+	messageType : 'geometry_msgs/Twist'
+	});
+	var twist = new ROSLIB.Message({
+	linear : {x : 0,y : 0,z : 0},
+	angular : {x : 0,y : 0,z : 0}
+	});//创建一个message
+	
+	var gf = new ROSLIB.Message({
+	linear: { x: 4, y: 0, z: 0, },
+	angular: { x: 0, y: 0, z: 0, },
+	});
+	
+	var gb = new ROSLIB.Message({
+	linear: { x: -4, y: 0, z: 0, },
+	angular: { x: 0, y: 0, z: 0, },
+	});
+	
+	var tl = new ROSLIB.Message({
+	linear: { x: 0, y: 0, z: 0, },
+	angular: { x: 0, y: 0, z: 4.0, },
+	});
+	
+	var tr = new ROSLIB.Message({
+	linear: { x: 0, y: 0, z: 0, },
+	angular: { x: 0, y: 0, z: -4.0, },
+	});
+	
+	function upClick()
+	{
+		cmdVel.publish(gf);
+	}
+	function downClick()
+	{
+		cmdVel.publish(gb);
+	}
+	function leftClick()
+	{
+		cmdVel.publish(tl);
+	}
+	function rightClick()
+	{
+		cmdVel.publish(tr);
+	}
+	
+	/*********************遥控********************************/
+	/*********************停止********************************/
+	var CmdSend = new ROSLIB.Topic({
+	    ros : ros,
+	    name : '/Web_Cmd',
+	    messageType : 'String'
+	  });
+	var CmdDataStopRobot  = new ROSLIB.Message({
+	 data:"StopRobot"
+	  });
+	var CmdDataRunRobot  = new ROSLIB.Message({
+	 data:"RunRobot"
+	  });  
+	
+	function stop()
+	{  
+		let ele1 = document.getElementById("bts1")
+		if(ele1.innerText == "停止")
+		{
+		var text ='<img src="images/icon16.png"alt=""><img src="images/icon16_on.png"class="on" alt="">运行'
+		$('#bts1').html(text)
+		CmdSend.publish(CmdDataStopRobot);
+		}
+		else if(ele1.innerText == "运行")
+		{
+		var text ='<img src="images/icon13.png"alt=""><img src="images/icon13_on.png"class="on" alt="">停止'
+		$('#bts1').html(text)	
+		CmdSend.publish(CmdDataRunRobot);
+		}
+		
+		let ele2 = document.getElementById("bts2")
+		if(ele2.innerText == "停止")
+		{
+		var text ='<img src="images/icon16.png"alt=""><img src="images/icon16_on.png"class="on" alt="">运行'
+		$('#bts2').html(text)
+		CmdSend.publish(CmdDataStopRobot);
+		}
+		else if(ele2.innerText == "运行")
+		{
+		var text ='<img src="images/icon13.png"alt=""><img src="images/icon13_on.png"class="on" alt="">停止'
+		$('#bts2').html(text)
+		CmdSend.publish(CmdDataRunRobot);
+		}
+	}
+	
+	/*********************停止********************************/
+	/*********************关机********************************/
+	var CmdDataTurnOffRobot  = new ROSLIB.Message({
+	 data:"TurnOffRobot"
+	  });
+	  
+	function turnOff()
+	{
+	CmdSend.publish(CmdDataTurnOffRobot);
+	}
+
+	/*********************关机********************************/
+	/******************开启导航*******************************/
+	var CmdDataStartNavi  = new ROSLIB.Message({
+	data:"StartNavi"
+	}); 
+	function turnOnNav()
+	{
+		CmdSend.publish(CmdDataStartNavi);
+		//PreConditionNav = 1;
+	}
+	/******************开启导航*******************************/
+	/******************开始任务*******************************/
+	var CmdDataStartTask  = new ROSLIB.Message({
+	data:"StartTask"
+	});  
+	var CmdDataEndTask  = new ROSLIB.Message({
+	data:"EndTask"
+	}); 
+	var StartTaskFlag = 0;
+	function startTask()
+	{
+	let ele1 = document.getElementById("btt1")
+	if(ele1.innerText == "开始任务")
+	{
+	var text ='<img src="images/icon17.png"alt=""><img src="images/icon17_on.png"class="on" alt="">结束任务'
+	$('#btt1').html(text)
+	CmdSend.publish(CmdDataStartTask);
+	StartTaskFlag = 1;
+	}
+	else 
+	{
+	var text ='<img src="images/icon16.png"alt=""><img src="images/icon16_on.png"class="on" alt="">开始任务'
+	$('#btt1').html(text)
+	CmdSend.publish(CmdDataEndTask);
+	StartTaskFlag = 0;
+	}
+	
+	let ele2 = document.getElementById("btt2")
+	if(ele2.innerText == "开始任务")
+	{
+	var text ='<img src="images/icon17.png"alt=""><img src="images/icon17_on.png"class="on" alt="">结束任务'
+	$('#btt2').html(text)
+	CmdSend.publish(CmdDataStartTask);
+	StartTaskFlag = 1;
+	}
+	else 
+	{
+	var text ='<img src="images/icon16.png"alt=""><img src="images/icon16.png"class="on" alt="">开始任务'
+	$('#btt2').html(text)
+	CmdSend.publish(CmdDataEndTask);
+	StartTaskFlag = 0;
+	}
+	}
+	/******************开始任务*******************************/
+	/*******************消杀灯*******************************/
+	var CmdDataOpenLight = new ROSLIB.Message({
+	 data:"OpenLight"
+	 }); 
+	 var CmdDataOffLight = new ROSLIB.Message({
+	data:"OffLight"
+	}); 
+	var CmdDataOpenSpray = new ROSLIB.Message({
+	data:"OpenSpray"
+	}); 
+	var CmdDataOffSpray = new ROSLIB.Message({
+	data:"OffSpray"
+	}); 
+	function closeLight()
+	{
+		let ele1 = document.getElementById("btl1");
+		let ele2 = document.getElementById("btl2");
+		if(ele1.innerText == " 打开消杀灯" || ele2.innerText == " 打开消杀灯")
+		{
+		var text ='<img src="images/icon2.png"alt=""><img src="images/icon2_on.png"class="on" alt=""> 关闭消杀灯'
+		$('#btl1').html(text)	
+		var text ='<img src="images/icon2.png"alt=""><img src="images/icon2_on.png"class="on" alt=""> 关闭消杀灯'
+		$('#btl2').html(text)
+		CmdSend.publish(CmdDataOpenSpray);
+		}
+		else 
+		{
+		var text ='<img src="images/icon2.png"alt=""><img src="images/icon2_on.png"class="on" alt=""> 打开消杀灯'
+		$('#btl1').html(text)
+		var text ='<img src="images/icon2.png"alt=""><img src="images/icon2_on.png"class="on" alt=""> 打开消杀灯'
+		$('#btl2').html(text)
+		CmdSend.publish(CmdDataOffSpray);
+		}
+	}
+	
+	/*******************消杀灯*******************************/
+	/******************消杀喷雾*******************************/
+	
+	function closeSpray()
+	{
+		let ele1 = document.getElementById("btsp1");
+		let ele2 = document.getElementById("btsp2");
+		if(ele1.innerText == " 打开消杀喷雾" || ele2.innerText == " 打开消杀喷雾")
+		{
+		var text ='<img src="images/icon4.png"alt=""><img src="images/icon4_on.png"class="on" alt=""> 关闭消杀喷雾'
+		$('#btsp1').html(text)	
+		var text ='<img src="images/icon4.png"alt=""><img src="images/icon4_on.png"class="on" alt=""> 关闭消杀喷雾'
+		$('#btsp2').html(text)
+		CmdSend.publish(CmdDataOpenLight);
+		}
+		else
+		{
+		var text ='<img src="images/icon4.png"alt=""><img src="images/icon4_on.png"class="on" alt=""> 打开消杀喷雾'
+		$('#btsp1').html(text)
+		var text ='<img src="images/icon4.png"alt=""><img src="images/icon4_on.png"class="on" alt=""> 打开消杀喷雾'
+		$('#btsp2').html(text)
+		CmdSend.publish(CmdDataOffLight);
+		}
+	}
+	
+	/******************消杀喷雾*******************************/
+	/******************省电模式*******************************/
+	function closePower()
+	{
+	let ele1 = document.getElementById("btsm1")
+	if(ele1.innerText == " 打开省电模式")
+	{
+	var text ='<img src="images/icon6.png"alt=""><img src="images/icon6_on.png"class="on" alt=""> 关闭省电模式'
+	$('#btsm1').html(text)
+	CmdSend.publish(CmdDataOffLight);
+	CmdSend.publish(CmdDataOffSpray);
+	}
+	else 
+	{
+	var text ='<img src="images/icon6.png"alt=""><img src="images/icon6_on.png"class="on" alt=""> 打开省电模式'
+	$('#btsm1').html(text)
+	//CmdSend.publish(CmdDataEndTask);
+	}	
+	let ele2 = document.getElementById("btsm2")
+	if(ele2.innerText == " 打开省电模式")
+	{
+	var text ='<img src="images/icon6.png"alt=""><img src="images/icon6_on.png"class="on" alt=""> 关闭省电模式'
+	$('#btsm2').html(text)
+	CmdSend.publish(CmdDataOffLight);
+	CmdSend.publish(CmdDataOffSpray);
+	}
+	else 
+	{
+	var text ='<img src="images/icon6.png"alt=""><img src="images/icon6_on.png"class="on" alt=""> 打开省电模式'
+	$('#btsm2').html(text)
+	//CmdSend.publish(CmdDataEndTask);
+	}	
+	}
+	/******************省电模式*******************************/
+	/******************查看位置*******************************/
+	var CmdDataViewPose  = new ROSLIB.Message({
+	data:"ViewPose"
+	});  
+	function viewClick()
+	{
+	CmdSend.publish(CmdDataViewPose);	
+	//PreConditionViewPose = 1;
+	//listenertrans.subscribe(function(message) {
+	//document.getElementById("RoboTrans").innerHTML = ("Trans "+"X:"+message.x+"    Y:"+message.x+"    Z:"+message.z);
+	//})
+	
+	//listenerorient.subscribe(function(message) {
+	//document.getElementById("RoboRot").innerHTML = ("Rot "+"X:"+message.x+"    Y:"+message.x+"    Z:"+message.z+"    W:"+message.w);
+	//})	
+	}
+	
+	/******************查看位置*******************************/
+	/******************运行时间*******************************/
+	var listenertime = new ROSLIB.Topic({
+	ros : ros,
+	name : 'RunTime',
+	messageType : 'std_msgs/String'
+	});
+	listenertime.subscribe(function(message) {
+	document.getElementById("RunTime1").innerHTML = (message.data);
+	document.getElementById("RunTime2").innerHTML = (message.data);
+	})
+	/******************运行时间*******************************/
+	/******************加载配置*******************************/
+	
+	
+	/******************加载配置*******************************/
+	/******************更新配置*******************************/
+	
+	
+	/******************更新配置*******************************/
+	/******************重置配置*******************************/
+	
+	
+	/******************重置配置*******************************/
+	/******************新建地图*******************************/
+	var CmdDataNewMap  = new ROSLIB.Message({
+	data:"NewMap"
+	}); 
+	function createMap(){
+	var viewer2 = new ROS3D.Viewer({
+	divID : 'map',
+	width : 640,
+	height : 1312,
+	antialias : true
+	});
+	
+	// Setup the marker client.
+	var gridClient = new ROS3D.OccupancyGridClient({
+	ros : ros,
+	rootObject : viewer2.scene,
+	continuous: true
+	});
+	
+	var tfClient = new ROSLIB.TFClient({
+		ros : ros,
+		angularThres : 0.01,
+		transThres : 0.01,
+		rate : 10,
+		fixedFrame : '/map'
+	})
+
+	var LaserScan = new ROS3D.LaserScan({
+		ros : ros,
+		topicName : '/scan'	
+	})
+	CmdSend.publish(CmdDataNewMap);
+	}
+	
+	/******************新建地图*******************************/
+	/******************预览地图*******************************/
+	var CmdDataOpenMap  = new ROSLIB.Message({
+	 data:"OpenMap"
+	  }); 
+	//var text ='<img src="images/icon6.png"alt=""><img src="images/icon6_on.png"class="on" alt=""> 关闭省电模式'
+	//$('#map').html(text)
+	function previewMap()
+	{
+	var viewer = new ROS2D.Viewer({
+	 divID : 'map',
+	 width : 640,
+	 height : 1312
+	 });
+	
+	var gridClient = new ROS2D.OccupancyGridClient({
+	 ros : ros,
+	 rootObject : viewer.scene,
+	 continues: true
+	 });
+	 
+	gridClient.on('change', function(){
+	startTime = new Date()
+	viewer.scaleToDimensions(gridClient.currentGrid.width, gridClient.currentGrid.height);
+	viewer.shift(gridClient.currentGrid.pose.position.x, gridClient.currentGrid.pose.position.y);
+	});
+	CmdSend.publish(CmdDataOpenMap);
+	}
+	
+	/******************预览地图*******************************/
+	/******************保存地图*******************************/
+	var CmdDataSaveMap  = new ROSLIB.Message({
+	data:"SaveMap"
+	}); 
+	
+	function saveMap()
+	{
+	CmdSend.publish(CmdDataSaveMap);
+	}
+	/******************保存地图*******************************/
+	/******************删除地图*******************************/
+	var CmdDataDeleteMap  = new ROSLIB.Message({
+	data:"DeleteMap"
+	}); 
+	
+	function DeleteMap()
+	{
+	CmdSend.publish(CmdDataDeleteMap);
+	}
+	/******************删除地图*******************************/
+			function load() {
+				console.log('加载配置');
+			}
+		
+		
+			function update() {
+				console.log('更新配置');
+			}
+		
+			function reset() {
+				console.log('重置配置');
+			}
+		
+			function backClick() {
+				console.log('手动回充');
+			}
+				
+			function saveMap() {
+				console.log('保存地图');
+			}
+		
+			function delMap() {
+				console.log('删除地图');
+			}
+						
+		
+			function init() {
+				console.log('初始点设置');
+			}
+		
+			function addPoint() {
+				$('.aside-point').show()
+			}
+		
+			function setNum() {
+				console.log('设置次数');
+			}
+		
+			function confirm() {
+				console.log('确定');
+			}
+			
+			$('#robo').click(function(){
+				$('.aside-info').toggle()
+				$('.aside-left').toggleClass('open')
+			})
+		</script>
+		<title></title>
+		<link href="fonts/iconfont.css" rel="stylesheet" type="text/css" />
+		<link rel="stylesheet" href="css/bootstrap.min.css">
+		<link href="css/style.css" rel="stylesheet" type="text/css" />
+	</head>
+	<body>
+		<div class="warrper">
+			<div class="head">
+				<div class="head_right">
+					<div class = "RunTime">
+						<div class = "RunTime-Text" id = "RunTime1"></div>
+					</div>
+					<button onclick="openFullscreen()" class="btn">
+						<i class="iconfont icon-quanping"></i>
+					</button>
+					<div class="temp">
+						<div id = "Temperature1"></div>
+					</div>
+					<div class="electric">
+						<div class="electric-progress">
+							<div class="electric-progress__inner" id = "batterydiv2">
+
+							</div>
+						</div><div id = "outputt2"></div>
+					</div>
+				</div>
+			</div>
+			<div class="aside-left">
+				<div class="aside-left__head">
+					<div class="logo">
+						<img src="images/logo.png" alt="">
+					</div>
+					<div class="aside-search">
+						<input type="text" class="form-control" placeholder="请输入机器人IP">
+					</div>
+					<div class="aside-links">
+						<a href="" class=""><i class="iconfont icon-denglu-copy"></i> 登录</a>
+						<a href="javascript:;" id="robo">Robo2</a>
+					</div>
+					<div class="aside-info">
+						<p><span>机器编号</span>: 1101234</p>
+						<p><span>电池容量</span>: 50000</p>
+						<p><span>外形尺寸</span>: 720*690*110cm</p>
+						<p><span>机器重量</span>: 40kg</p>
+						<p><span>最大功率</span>: 400</p>
+						<p><span>消毒方式</span>: 激光消毒&雾化消毒消毒</p>
+						<p><span>容量</span>: 13L</p>
+						<p><span>消杀半径</span>: 4m</p>
+					</div>
+				</div>
+				<div class="aside-group">
+					<div class="row">
+						<div class="col-6">
+							<button class="btn" onclick="load()"><img src="images/icon1.png" alt=""><img src="images/icon1_on.png" class="on" alt=""> 加载配置</button>
+						</div>
+						<div class="col-6">
+							<button id = "btl1" class="btn" onclick="closeLight()"><img src="images/icon2.png" alt=""><img src="images/icon2_on.png" class="on" alt="">
+								打开消杀灯</button>
+						</div>
+						<div class="col-6">
+							<button class="btn" onclick="update()"><img src="images/icon3.png" alt=""><img src="images/icon3_on.png" class="on" alt=""> 更新配置</button>
+						</div>
+						<div class="col-6">
+							<button class="btn" id="btsp1" onclick="closeSpray()"><img src="images/icon4.png" alt=""><img src="images/icon4_on.png" class="on" alt="">
+								打开消杀喷雾</button>
+						</div>
+						<div class="col-6">
+							<button class="btn" onclick="reset()"><img src="images/icon5.png" alt=""><img src="images/icon5_on.png" class="on" alt=""> 重置配置</button>
+						</div>
+						<div class="col-6">
+							<button class="btn" id = "btsm1" onclick="closePower()"><img src="images/icon6.png" alt=""><img src="images/icon6_on.png" class="on" alt="">
+								打开省电模式</button>
+						</div>
+						<div class="col-6">
+							<button class="btn" onclick="backClick()"><img src="images/icon7.png" alt=""><img src="images/icon7_on.png" class="on" alt=""> 手动回充</button>
+						</div>
+						<div class="col-6">
+							<button class="btn" onclick="viewClick()"><img src="images/icon8.png" alt=""><img src="images/icon8_on.png" class="on" alt=""> 查看位置</button>
+						</div>
+						<div class="col-6">
+							<button class="btn" onclick="createMap()"><img src="images/icon9.png" alt=""><img src="images/icon9_on.png" class="on" alt=""> 新建地图</button>
+						</div>
+						<div class="col-6">
+							<button class="btn" onclick="previewMap()"><img src="images/icon10.png" alt=""><img src="images/icon10_on.png" class="on" alt="">
+								预览地图</button>
+						</div>
+						<div class="col-6">
+							<button class="btn" onclick="saveMap()"><img src="images/icon11.png" alt=""><img src="images/icon11_on.png" class="on" alt=""> 保存地图</button>
+						</div>
+						<div class="col-6">
+							<button class="btn" onclick="delMap()"><img src="images/icon12.png" alt=""><img src="images/icon12_on.png" class="on" alt=""> 删除地图</button>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="aside-right">
+				<div class="aside-item">
+					<div class="aside-item__hd">
+						任务配置
+					</div>
+					<div class="aside-item__bd">
+						<button class="btn" onclick="init()">初始点设置</button>
+					</div>
+				</div>
+				<div class="aside-item">
+					<div class="aside-item__hd">
+						目标点命名
+					</div>
+					<div class="aside-item__bd">
+						<div class="form-row">
+							<div class="form-item flex_bd">
+								<input type="text" class="form-control" placeholder="目标点1">
+							</div>
+							<div style="width: 130px;margin-left: 20px;">
+								<button class="btn" onclick="addPoint()">目标点添加</button>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="aside-item">
+					<div class="aside-item__hd">
+						等待时间
+					</div>
+					<div class="aside-item__bd">
+						<div class="form-row">
+							<div class="form-item flex_bd">
+								<input type="text" class="form-control" placeholder="0">
+								<span class="unit">S</span>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="aside-item">
+					<div class="aside-item__hd">
+						消杀次数
+					</div>
+					<div class="aside-item__bd">
+						<div class="form-row">
+							<div class="form-item flex_bd">
+								<input type="text" class="form-control" placeholder="0">
+								<span class="unit">次</span>
+							</div>
+							<div style="width: 130px;margin-left: 20px;">
+								<button class="btn" onclick="setNum()">设置次数</button>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="aside-point">
+					<h4>添加目标点6成功</h4>
+					<p>目标点1 等待时间：0S</p>
+					<p>目标点2 等待时间：0S</p>
+					<p>目标点3 等待时间：0S</p>
+					<p>目标点4 等待时间：0S</p>
+					<p>目标点5 等待时间：0S</p>
+					<p>目标点6 等待时间：0S</p>
+					<h4>添加目标点6成功</h4>
+					<p>目标点1 等待时间：0S</p>
+					<p>目标点2 等待时间：0S</p>
+					<p>目标点3 等待时间：0S</p>
+					<p>目标点4 等待时间：0S</p>
+					<p>目标点5 等待时间：0S</p>
+					<p>目标点6 等待时间：0S</p>
+					<h4>添加目标点6成功</h4>
+					<p>目标点1 等待时间：0S</p>
+					<p>目标点2 等待时间：0S</p>
+					<p>目标点3 等待时间：0S</p>
+					<p>目标点4 等待时间：0S</p>
+					<p>目标点5 等待时间：0S</p>
+					<p>目标点6 等待时间：0S</p>
+				</div>
+			</div>
+			<div class="bottom">
+				<div class="bottom-row clearfix">
+					<div class="bottom-left">
+						<div class="robot-control">
+							<div class="robot-label">机器人遥控</div>
+							<div class="robot-position">
+								<button class="btn up" onclick="upClick()">
+									<img src="images/up.png" alt="">
+								</button>
+								<button class="btn right" onclick="rightClick()">
+									<img src="images/right.png" alt="">
+								</button>
+								<button class="btn down" onclick="downClick()">
+									<img src="images/down.png" alt="">
+								</button>
+								<button class="btn left" onclick="leftClick()">
+									<img src="images/left.png" alt="">
+								</button>
+								<button class="robot-center" onclick="confirm()">
+									Ok
+								</button>
+							</div>
+						</div>
+					</div>
+					<div class="bottom-right">
+						<div class="robot-panel">
+							<div class="robot-title">控制中心</div>
+							<div class="control-btns">
+								<button class="btn" id = "bts1" onclick="stop()"><img id = "imgsr00" src="images/icon13.png" alt=""><img id = "imgsr01" src="images/icon13_on.png" class="on" alt="">停止</button>
+								<button class="btn" onclick="turnOff()"><img src="images/icon14.png" alt=""><img src="images/icon14_on.png" class="on" alt="">关机</button>
+								<button class="btn" onclick="turnOnNav()"><img src="images/icon15.png"
+										alt=""><img src="images/icon15_on.png" class="on" alt="">开启导航</button>
+								<button class="btn" id = "btt1" onclick="startTask()"><img src="images/icon16.png"
+										alt=""><img src="images/icon16_on.png" class="on" alt="">开始任务</button>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="map" >
+				<!--<img src="images/map.png" alt="">-->
+				<div id="map" style="width: 300px;margin-left: 600px;"></div>		
+			</div>
+
+		</div>
+		<div class="mb-warrper">
+			<div class="mb-head">
+				<div class="head_right">
+					<div class = "RunTime">
+						<div class = "RunTime-Text" id = "RunTime2"></div>
+					</div>
+					<button onclick="openFullscreen()" class="btn">
+						<i class="iconfont icon-quanping"></i>
+					</button>
+					<div class="temp">
+						<div id = "Temperature2"></div>
+					</div>
+					<div class="electric">
+						<div class="electric-progress">
+							<div class="electric-progress__inner" id = "batterydiv1" >
+			
+							</div>
+						</div><div id = "outputt1"></div>
+					</div>
+				</div>
+			</div>
+			<div class="mb-row">
+				<div class="mb-left">
+					<div class="mb-logo">
+						<img src="images/mb_logo.png" alt="">
+					</div>
+					<div class="mb-group">
+						<button class="btn" onclick="load()"><img src="images/icon1.png" alt=""><img src="images/icon1_on.png" class="on" alt=""> 加载配置</button>
+						<button class="btn" onclick="update()"><img src="images/icon3.png" alt=""><img src="images/icon3_on.png" class="on" alt=""> 更新配置</button>
+						<button class="btn" onclick="reset()"><img src="images/icon5.png" alt=""><img src="images/icon5_on.png" class="on" alt=""> 重置配置</button>
+						<button class="btn" onclick="backClick()"><img src="images/icon7.png" alt=""><img src="images/icon7_on.png" class="on" alt=""> 手动回充</button>
+						<button class="btn" onclick="viewClick()"><img src="images/icon8.png" alt=""><img src="images/icon8_on.png" class="on" alt=""> 查看位置</button>
+					</div>
+					<div class="mb-item">
+						<div class="mb-item__hd">
+							任务配置
+						</div>
+						<div class="mb-item__bd">
+							<button class="btn" onclick="init()">初始点设置</button>
+						</div>
+					</div>
+				</div>
+				<div class="mb-center">
+					<div class="mb-control">
+						<div class="row">
+							<div class="col-3">
+								<button class="btn" id = "bts2" onclick="stop()"><img id = "imgsr10" src="images/icon13.png" alt=""><img id = "imgsr11" src="images/icon13_on.png" class="on" alt="">停止</button>
+							</div>
+							<div class="col-3">
+								<button class="btn" onclick="turnOff()"><img src="images/icon14.png" alt=""><img src="images/icon14_on.png" class="on" alt="">关机</button>
+							</div>
+							<div class="col-3">
+								<button class="btn" onclick="turnOnNav()"><img src="images/icon15.png"
+										alt=""><img src="images/icon15_on.png" class="on" alt="">开启导航</button>
+							</div>
+							<div class="col-3">
+								<button class="btn" id = "btt2" onclick="startTask()"><img src="images/icon16.png"
+										alt=""><img src="images/icon16_on.png" class="on" alt="">开始任务</button>
+							</div>
+						</div>
+					</div>
+					<div class="mb-map" id="map">
+						<img src="images/map.png" alt="">
+						<div class="mb-silde">
+							<div class="mb-block">
+							</div>
+						</div>
+					</div>
+					<div class="mb-items">
+						<div class="row">
+							<div class="col-4">
+								<div class="mb-item">
+									<div class="mb-item__hd">
+										目标点命名
+									</div>
+									<div class="mb-item__bd">
+										<input type="text" class="form-control" placeholder="目标点1">
+									</div>
+								</div>
+							</div>
+							<div class="col-4">
+								<div class="mb-item">
+									<div class="mb-item__hd">
+										等待时间
+									</div>
+									<div class="mb-item__bd">
+										<div class="mb-cell">
+											<input type="text" class="form-control" value="0" placeholder="">
+											<span class="unit">S</span>
+										</div>
+									</div>
+								</div>
+							</div>
+							<div class="col-4">
+								<div class="mb-item">
+									<div class="mb-item__hd">
+										消杀次数
+									</div>
+									<div class="mb-item__bd">
+										<div class="mb-flex">
+											<div class="mb-cell flex_bd">
+												<input type="text" class="form-control" value="0" placeholder="">
+												<span class="unit">次</span>
+											</div>
+											<button class="btn" onclick="setNum()">设置次数</button>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="mb-right">
+					<div class="mb-links">
+						<a href=""  class=""><i class="iconfont icon-denglu-copy"></i> 登录</a>
+						<a href="javascript:;" data-toggle="modal" data-target="#modal">Robo2</a>
+					</div>
+					<div class="mb-form__item">
+						<input type="text" class="form-control" placeholder="请输入机器人IP">
+					</div>
+					<div class="mb-group">
+						<button class="btn" id = "btl2" onclick="closeLight()"><img src="images/icon2.png" alt=""><img src="images/icon2_on.png" class="on" alt=""> 打开消杀灯</button>
+						<button class="btn" id = "btsp2" onclick="closeSpray()"><img src="images/icon4.png" alt=""><img src="images/icon4_on.png" class="on" alt=""> 打开消杀喷雾</button>
+						<button class="btn" id = "btsm2" onclick="closePower()"><img src="images/icon6.png" alt=""><img src="images/icon6_on.png" class="on" alt=""> 打开省电模式</button>
+						<div class="mb-drop">
+							<div class="flex_bd"><button class="btn" onclick="createMap()"><img src="images/icon9.png"
+										alt=""><img src="images/icon9_on.png" class="on" alt=""> 新建地图</button></div>
+							<span class="mb-arrow" data-toggle="modal" data-target="#exampleModal"><i
+									class="iconfont icon-arrow-down"></i></span>
+						</div>
+					</div>
+					<div class="mb-item">
+						<div class="mb-item__hd">
+							目标点
+						</div>
+						<div class="mb-item__ft">
+							<button class="btn" data-toggle="modal" data-target="#modal2">目标点添加</button>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<!-- Modal -->
+		<div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+			<div class="modal-dialog modal-dialog-centered modal-dialog-sm">
+				<div class="modal-content">
+					<div class="modal-btns">
+						<button class="btn" onclick="previewMap()"><img src="images/icon10.png" alt=""><img src="images/icon10_on.png" class="on" alt="">预览地图</button>
+						<button class="btn" onclick="saveMap()"><img src="images/icon11.png" alt=""><img src="images/icon11_on.png" class="on" alt="">保存地图</button>
+						<button class="btn" onclick="delMap()"><img src="images/icon12.png" alt=""><img src="images/icon12_on.png" class="on" alt="">删除地图</button>
+					</div>
+				</div>
+			</div>
+		</div>
+		<!-- Modal2 -->
+		<div class="modal fade" id="modal" tabindex="-1" aria-labelledby="modal" aria-hidden="true">
+			<div class="modal-dialog modal-dialog-centered modal-dialog-sm">
+				<div class="modal-content">
+					<div class="robot-modal-body">
+						<div class="robot-modal-title">Robo2</div>
+						<div class="robot-modal-info">
+							<p><span>机器编号</span>: 1101234</p>
+							<p><span>电池容量</span>: 50000</p>
+							<p><span>外形尺寸</span>: 720*690*110cm</p>
+							<p><span>机器重量</span>: 40kg</p>
+							<p><span>最大功率</span>: 400</p>
+							<p><span>消毒方式</span>: 激光消毒&雾化消毒消毒</p>
+							<p><span>容量</span>: 13L</p>
+							<p><span>消杀半径</span>: 4m</p>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<!-- Modal3 -->
+		<div class="modal fade" id="modal2" tabindex="-1" aria-labelledby="modal" aria-hidden="true">
+			<div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-dialog-sm">
+				<div class="modal-content">
+					<div class="modal-body">
+						<div class="robot-modal-body">
+							<div class="robot-modal-info">
+								<div class="robot-point">
+									<h4>添加目标点6成功</h4>
+									<p>目标点1 等待时间：0S</p>
+									<p>目标点2 等待时间：0S</p>
+									<p>目标点3 等待时间：0S</p>
+									<p>目标点4 等待时间：0S</p>
+									<p>目标点5 等待时间：0S</p>
+									<p>目标点6 等待时间：0S</p>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		
+	
+	</body>
+</html>
