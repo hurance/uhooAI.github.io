@@ -39,8 +39,20 @@ ul {
 	margin: 0;
 }
 
-li {
+/*li {
 	list-style: none;
+}*/
+
+li{
+
+width: 300px;
+
+height: 30px;
+
+margin: 20px 0;
+
+font-size: 20px;
+
 }
 
 h1,
@@ -511,6 +523,7 @@ table {
 	position: relative;
 	margin-right: 8px;
 }
+
 
 .electric-progress__inner {
 	height: 100%;
@@ -1038,8 +1051,8 @@ table {
 	position: absolute;
 	height: 29px;
 	width: 29px;
-	background-color: rgba(0, 0, 0, 0.6);
-	border-radius: 50%;
+	/*background-color: rgba(0, 0, 0, 0.6);*/
+	/*border-radius: 50%;*/
 	left: 50%;
 	top: 50%;
 	transform: translate(-50%, -50%);
@@ -1135,11 +1148,11 @@ table {
 .mb-silde {
 	width: 71px;
 	height: 71px;
-	border-radius: 50%;
-	background-color: rgba(0, 0, 0, 0.4);
+	/*border-radius: 50%;*/
+	/*background-color: rgba(0, 0, 0, 0.4);*/
 	position: absolute;
-	right: 10px;
-	bottom: 10px;
+	right: 50px;
+	bottom: 25px;
 	z-index: 9;
 }
 
@@ -1206,6 +1219,12 @@ table {
 
 .modal-dialog-sm .modal-body {
 	padding: 0;
+}
+
+.modal-content{
+	width: 350px;
+	
+	height: 200px; 
 }
 
 .mb-head {
