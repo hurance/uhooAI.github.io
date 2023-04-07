@@ -9,19 +9,20 @@
 		<!--<meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests" />-->
 		<meta name="viewport" content="width=device-width,user-scalable=no,initial-scale=1.0,maximum-scale=1.0,minimum-scale=1.0">
 		<script type="text/javascript" src="js/EventEmitter.min.js"></script>
-		
+		<!--<script type="text/javascript" src="js/nipplejs.js5"></script>-->
+		<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.7.3/nipplejs.js"></script>
 		<script type="text/javascript" src="js/roslib.min.js"></script>
 		<script type="text/javascript" src="http://static.robotwebtools.org/EaselJS/current/easeljs.min.js"></script>
 		<script type="text/javascript" src="js/ros2d.min.js"></script>
 		<!--<script type="text/javascript" src="http://static.robotwebtools.org/ros2djs/current/ros2d.min.js"></script>-->
-		<script src="js/jquery-2.1.1.min.js" type="text/javascript"></script>
-		<script src="js/bootstrap.min.js"></script>
-		<script src="js/swiper.min.js"></script>
-		<script src="js/ros3d.js"></script>
+		<script type="text/javascript" src="js/jquery-2.1.1.min.js" type="text/javascript"></script>
+		<script type="text/javascript" src="js/bootstrap.min.js"></script>
+		<script type="text/javascript" src="js/swiper.min.js"></script>
+		<script type="text/javascript" src="js/ros3d.js"></script>
 		<script type="text/javascript" type="text/javascript">
 	/*********************IP登录********************************/
 			var ros = new ROSLIB.Ros({
-			url : 'ws://192.168.2.66:9090'  //43 66
+			url : 'ws://192.168.2.43:9090'  //43 66
 			//url : 'ws://192.168.ZZ090'
 			});
 			 
@@ -59,10 +60,27 @@
 			 messageType : 'std_msgs/Float32'
 			 });
 			 listenertemperature.subscribe(function(message) {
-			 document.getElementById("Temperature1").innerHTML = ('当前温度：'+message.data.toFixed(1)+"°");
-			 document.getElementById("Temperature2").innerHTML = ('当前温度：'+message.data.toFixed(1)+"°");
+			 document.getElementById("Temperature1").innerHTML = ('温度：'+message.data.toFixed(1)+"°");
+			 document.getElementById("Temperature2").innerHTML = ('温度：'+message.data.toFixed(1)+"°");
 			 })
-	/*********************温度********************************/		 
+	/*********************温度********************************/	
+	/*********************液位********************************/	
+	var listenerliquid = new ROSLIB.Topic({
+	ros : ros,
+	name : 'liquid',
+	messageType : 'std_msgs/Int64'
+	});
+	listenerliquid.subscribe(function(message) {
+	if (message.data == 16)
+	var level = "正常";
+	if (message.data == 17)
+	var level = "满";
+	if (message.data == 1)
+	var level = "缺水";
+	document.getElementById("Liquid1").innerHTML = ('液位：'+level);
+	document.getElementById("Liquid2").innerHTML = ('液位：'+level);
+	})
+	/*********************液位********************************/	
 	/*********************全屏********************************/	
 			 var elem = document.documentElement;		 
 			 function openFullscreen() {
@@ -77,7 +95,7 @@
 			   }
 			 }
 	/*********************全屏********************************/		 
-	/*********************遥控********************************/	 
+	/********************控制按键*****************************/	 
 	var cmdVel = new ROSLIB.Topic({
 	ros : ros,
 	name : '/cmd_vel',
@@ -125,7 +143,78 @@
 		cmdVel.publish(tr);
 	}
 	
-	/*********************遥控********************************/
+	/********************控制按键******************************/
+	/********************控制遥感******************************/
+	cmd_vel_listener = new ROSLIB.Topic({
+	   ros : ros,
+	   name : "/cmd_vel",
+	   messageType : 'geometry_msgs/Twist'
+	 });
+	 
+	move = function (linear, angular) {
+	  var twist = new ROSLIB.Message({
+	    linear: {
+	      x: linear,
+	      y: 0,
+	      z: 0
+	    },
+	    angular: {
+	      x: 0,
+	      y: 0,
+	      z: angular
+	    }
+	  });
+	  cmd_vel_listener.publish(twist);
+	}
+	
+	createJoystick = function () {
+	      var options = {
+	        zone: document.getElementById('zone_joystick'),
+	        threshold: 0.1,
+	        position: { left: 80 + '%' },
+	        mode: 'static',
+	        size: 150,
+	        color: '#000000',
+	      };
+	      manager = nipplejs.create(options);
+	
+	      linear_speed = 0;
+	      angular_speed = 0;
+	
+	      self.manager.on('start', function (event, nipple) {
+	        console.log("Movement start");
+	      });
+	
+	      self.manager.on('move', function (event, nipple) {
+	        console.log("Moving");
+	      });
+	
+	      self.manager.on('end', function () {
+	        console.log("Movement end");
+	      });
+		  manager.on('start', function (event, nipple) {
+		    timer = setInterval(function () {
+		      move(linear_speed, angular_speed);
+		    }, 25);
+		  });
+		  manager.on('end', function () {
+		    if (timer) {
+		      clearInterval(timer);
+		    }
+		    self.move(0, 0);
+		  });
+		  manager.on('move', function (event, nipple) {
+		    max_linear = 0.8; // m/s
+		    max_angular = 1.5; // rad/s
+		    max_distance = 90//75.0; // pixels;
+		    linear_speed = Math.sin(nipple.angle.radian) * max_linear * nipple.distance/max_distance;
+		    angular_speed = -Math.cos(nipple.angle.radian) * max_angular * nipple.distance/max_distance;
+		  });
+	    }
+	    window.onload = function () {
+	      createJoystick();
+	    }
+	/********************控制遥感******************************/
 	/*********************停止********************************/
 	var CmdSend = new ROSLIB.Topic({
 	    ros : ros,
@@ -189,7 +278,7 @@
 	function turnOnNav()
 	{
 		CmdSend.publish(CmdDataStartNavi);
-		//PreConditionNav = 1;
+		PreConditionNav = 1;
 	}
 	/******************开启导航*******************************/
 	/******************开始任务*******************************/
@@ -300,23 +389,11 @@
 	function closePower()
 	{
 	let ele1 = document.getElementById("btsm1")
-	if(ele1.innerText == " 打开省电模式")
-	{
-	var text ='<img src="images/icon6.png"alt=""><img src="images/icon6_on.png"class="on" alt=""> 关闭省电模式'
-	$('#btsm1').html(text)
-	CmdSend.publish(CmdDataOffLight);
-	CmdSend.publish(CmdDataOffSpray);
-	}
-	else 
-	{
-	var text ='<img src="images/icon6.png"alt=""><img src="images/icon6_on.png"class="on" alt=""> 打开省电模式'
-	$('#btsm1').html(text)
-	//CmdSend.publish(CmdDataEndTask);
-	}	
 	let ele2 = document.getElementById("btsm2")
-	if(ele2.innerText == " 打开省电模式")
+	if(ele1.innerText == " 打开省电模式"|| ele2.innerText == " 打开省电模式")
 	{
 	var text ='<img src="images/icon6.png"alt=""><img src="images/icon6_on.png"class="on" alt=""> 关闭省电模式'
+	$('#btsm1').html(text)
 	$('#btsm2').html(text)
 	CmdSend.publish(CmdDataOffLight);
 	CmdSend.publish(CmdDataOffSpray);
@@ -324,9 +401,11 @@
 	else 
 	{
 	var text ='<img src="images/icon6.png"alt=""><img src="images/icon6_on.png"class="on" alt=""> 打开省电模式'
+	$('#btsm1').html(text)
 	$('#btsm2').html(text)
 	//CmdSend.publish(CmdDataEndTask);
 	}	
+		
 	}
 	/******************省电模式*******************************/
 	/******************查看位置*******************************/
@@ -336,14 +415,7 @@
 	function viewClick()
 	{
 	CmdSend.publish(CmdDataViewPose);	
-	//PreConditionViewPose = 1;
-	//listenertrans.subscribe(function(message) {
-	//document.getElementById("RoboTrans").innerHTML = ("Trans "+"X:"+message.x+"    Y:"+message.x+"    Z:"+message.z);
-	//})
-	
-	//listenerorient.subscribe(function(message) {
-	//document.getElementById("RoboRot").innerHTML = ("Rot "+"X:"+message.x+"    Y:"+message.x+"    Z:"+message.z+"    W:"+message.w);
-	//})	
+	PreConditionViewPose = 1;	
 	}
 	
 	/******************查看位置*******************************/
@@ -359,22 +431,281 @@
 	})
 	/******************运行时间*******************************/
 	/******************加载配置*******************************/
+	var waittime = [];
+	var togoal = [];
+	var goalname = [];
+	var runtime = [];
+	var ListLenth = 0;
 	
+	var CmdDataGoalInfo = new ROSLIB.Message({
+	data:"GoalInfo"
+	});
+	
+	var listenergoalname = new ROSLIB.Topic({
+	ros : ros,
+	name : '/GoalName',
+	messageType : 'std_msgs/String'
+	});
+	
+	var listenerwaittime = new ROSLIB.Topic({
+	ros : ros,
+	name : '/WaitTime',
+	messageType : 'std_msgs/String'
+	});
+	
+	var listenertogoal = new ROSLIB.Topic({
+	ros : ros,
+	name : '/ToGoal',
+	messageType : 'std_msgs/String'
+	});
+	
+	var listenerruntimes = new ROSLIB.Topic({
+	ros : ros,
+	name : 'RunTimes',
+	messageType : 'std_msgs/String'
+	});
+	
+	listenerruntimes.subscribe(function(message) {
+	runtime = message.data;
+	var rt = runtime.split(',');
+	runtime = rt;
+	});
+	
+	listenergoalname.subscribe(function(message) {
+	goalname = message.data;
+	var gn = goalname.split(',');
+	goalname = gn;
+	
+	//console.log(goalname);
+	})
+	listenerwaittime.subscribe(function(message) {
+	waittime = message.data;
+	var wt = waittime.split(',');
+	waittime = wt;
+	
+	//console.log(waittime);
+	})
+	listenertogoal.subscribe(function(message) {
+	togoal = message.data;
+	var tg = togoal.split(',');
+	togoal = tg;
+	
+	//console.log(togoal);
+	})
+	
+	function load2(){
+		document.getElementById("SetPointLog2").innerHTML = ("加载配置:  成功！");
+		document.getElementById("SetPointLog1").innerHTML = ("加载配置:  成功！");
+		ToGoalList = [];
+		$('.aside-point').show()
+		document.getElementById("boxr").innerHTML = "";
+		//document.getElementById("boxr").innerHTML = "";
+		CmdSend.publish(CmdDataGoalInfo);
+		GoalNameList = goalname;
+		WaitTimeList = waittime;
+		ToGoalList = togoal;
+		RunTimesList = runtime;
+		//CmdSend.publish(CmdDataCheckProcess);
+		//listenerruntimes.subscribe(function(message) {
+		//runtime = message.data;
+		//var rt = runtime.split(',');
+		//runtime = rt;
+		//document.getElementById("RunTimes").innerHTML = ("当前任务进度："+ runtime[1]+"/"+runtime[0]);
+		//})
+				
+		ListLenth = goalname.length;
+		console.log(ListLenth);
+		
+		var ul = document.createElement('ul');
+		var box=document.getElementById('boxr');
+		box.appendChild(ul);
+		
+		for(i = 0; i < ListLenth; i++ )
+		{
+			var li = document.createElement('li');
+			
+			ul.appendChild(li);
+			setInnerText(li, goalname[i]+ "  " + "等待时间:"+"    "+waittime[i]);
+		}
+		
+		var lis = document.getElementsByTagName('li');
+		var num = lis.length;
+		
+		for(i = 0;i < num;i++)
+		{
+		if(togoal[i] == "0")
+		{
+		lis[i].style.backgroundColor = '';
+		ToGoalList[i] = "0";
+		}
+		else
+		{
+		lis[i].style.backgroundColor = 'red';
+		ToGoalList[i] = "1";
+		}
+		}
+		 
+		for(let i=0; i<num; i++){	 
+			lis[i].onclick=function(){		
+				//lis[i].style.backgroundColor = 'green';
+				if(lis[i].style.backgroundColor == 'red'){
+				    lis[i].style.backgroundColor = '';
+					ToGoalList[i] = '0';
+				}else{
+				    lis[i].style.backgroundColor = 'red';
+					ToGoalList[i] = "1";
+				}
+					console.log(ToGoalList);	
+			}
+		}
+			
+	}
+	
+	function load(){
+		document.getElementById("SetPointLog2").innerHTML = ("加载配置:  成功！");
+		document.getElementById("SetPointLog1").innerHTML = ("加载配置:  成功！");
+		ToGoalList = [];
+		$('.aside-point').show()
+		document.getElementById("box").innerHTML = "";
+		//document.getElementById("boxr").innerHTML = "";
+		CmdSend.publish(CmdDataGoalInfo);
+		GoalNameList = goalname;
+		WaitTimeList = waittime;
+		ToGoalList = togoal;
+		RunTimesList = runtime;
+		//CmdSend.publish(CmdDataCheckProcess);
+		//listenerruntimes.subscribe(function(message) {
+		//runtime = message.data;
+		//var rt = runtime.split(',');
+		//runtime = rt;
+		//document.getElementById("RunTimes").innerHTML = ("当前任务进度："+ runtime[1]+"/"+runtime[0]);
+		//})
+				
+		ListLenth = goalname.length;
+		console.log(ListLenth);
+		
+		var ul = document.createElement('ul');
+		var box=document.getElementById('box');
+		box.appendChild(ul);
+		
+		for(i = 0; i < ListLenth; i++ )
+		{
+			var li = document.createElement('li');
+			
+			ul.appendChild(li);
+			setInnerText(li, goalname[i]+ "  " + "等待时间:"+"    "+waittime[i]);
+		}
+		
+		var lis = document.getElementsByTagName('li');
+		var num = lis.length;
+		
+		for(i = 0;i < num;i++)
+		{
+		if(togoal[i] == "0")
+		{
+		lis[i].style.backgroundColor = '';
+		ToGoalList[i] = "0";
+		}
+		else
+		{
+		lis[i].style.backgroundColor = 'red';
+		ToGoalList[i] = "1";
+		}
+		}
+		 
+		for(let i=0; i<num; i++){	 
+			lis[i].onclick=function(){		
+				//lis[i].style.backgroundColor = 'green';
+				if(lis[i].style.backgroundColor == 'red'){
+				    lis[i].style.backgroundColor = '';
+					ToGoalList[i] = '0';
+				}else{
+				    lis[i].style.backgroundColor = 'red';
+					ToGoalList[i] = "1";
+				}
+					console.log(ToGoalList);	
+			}
+		}
+			
+	}
 	
 	/******************加载配置*******************************/
 	/******************更新配置*******************************/
+	var ToGoalSend = new ROSLIB.Topic({
+	     ros : ros,
+	     name : '/To_Goal',
+	     messageType : 'String'
+	   });
 	
+	var WaitTimeSend = new ROSLIB.Topic({
+	     ros : ros,
+	     name : '/Wait_Time',
+	     messageType : 'String'
+	   });
+	   
+	var GoalNameSend = new ROSLIB.Topic({
+	     ros : ros,
+	     name : '/Goal_Name',
+	     messageType : 'String'
+	   });
 	
+	var RunTimesSend = new ROSLIB.Topic({
+	     ros : ros,
+	     name : '/Run_Times',
+	     messageType : 'String'
+	   });
+	function update(){
+		document.getElementById("SetPointLog2").innerHTML = ("更新配置:  成功！");
+		document.getElementById("SetPointLog1").innerHTML = ("更新配置:  成功！");
+		ToGoalList = ToGoalList.toString();
+		WaitTimeList = WaitTimeList.toString();
+		GoalNameList = GoalNameList.toString();
+		//RunTimesList = RunTimesList.toString();
+		var ToGoalData = new ROSLIB.Message({
+		data:ToGoalList
+		}); 
+		var WaitTimeData = new ROSLIB.Message({
+		data:WaitTimeList
+		}); 
+		var GoalNameData = new ROSLIB.Message({
+		data:GoalNameList
+		}); 
+		var RunTimesData = new ROSLIB.Message({
+		data:RunTimesList
+		}); 
+		ToGoalSend.publish(ToGoalData);
+		WaitTimeSend.publish(WaitTimeData);
+		GoalNameSend.publish(GoalNameData);
+		RunTimesSend.publish(RunTimesData);
+		console.log(ToGoalList);
+		console.log(WaitTimeList);
+		console.log(GoalNameList);
+		console.log(RunTimesData);
+	}
 	/******************更新配置*******************************/
 	/******************重置配置*******************************/
 	
-	
+	function reset(){
+		document.getElementById("SetPointLog2").innerHTML = ("重置配置: 成功！");
+		document.getElementById("SetPointLog1").innerHTML = ("重置配置: 成功！");
+		var CmdDataReset  = new ROSLIB.Message({
+		data:"Reset"
+		});  
+		CmdSend.publish(CmdDataReset);
+		GoalNum = 1;
+		//document.getElementById("box").innerHTML = "";
+		//document.getElementById("boxr").innerHTML = "";
+	}
 	/******************重置配置*******************************/
 	/******************新建地图*******************************/
 	var CmdDataNewMap  = new ROSLIB.Message({
 	data:"NewMap"
 	}); 
 	function createMap(){
+	var text =''
+	$('#map').html(text)
+	$('#mb-map').html(text)	
+	$('#mb-3dmap').html(text)	
 	var viewer2 = new ROS3D.Viewer({
 	divID : 'map',
 	width : 640,
@@ -382,10 +713,23 @@
 	antialias : true
 	});
 	
+	var mb_viewer2 = new ROS3D.Viewer({
+	divID : 'mb-3dmap',
+	width : 650,
+	height : 320,
+	antialias : true
+	});
+	
 	// Setup the marker client.
 	var gridClient = new ROS3D.OccupancyGridClient({
 	ros : ros,
 	rootObject : viewer2.scene,
+	continuous: true
+	});
+	
+	var mb_gridClient = new ROS3D.OccupancyGridClient({
+	ros : ros,
+	rootObject : mb_viewer2.scene,
 	continuous: true
 	});
 	
@@ -397,10 +741,10 @@
 		fixedFrame : '/map'
 	})
 
-	var LaserScan = new ROS3D.LaserScan({
-		ros : ros,
-		topicName : '/scan'	
-	})
+	//var LaserScan = new ROS3D.LaserScan({
+	//	ros : ros,
+	//	topicName : '/scan'	
+	//})
 	CmdSend.publish(CmdDataNewMap);
 	}
 	
@@ -413,11 +757,21 @@
 	//$('#map').html(text)
 	function previewMap()
 	{
+	var text =''
+	$('#map').html(text)
+	$('#mb-map').html(text)
+	$('#mb-3dmap').html(text)
 	var viewer = new ROS2D.Viewer({
 	 divID : 'map',
 	 width : 640,
 	 height : 1312
 	 });
+	 
+	 var mb_viewer = new ROS2D.Viewer({
+	  divID : 'mb-map',
+	  width : 106,
+	  height : 240
+	  });
 	
 	var gridClient = new ROS2D.OccupancyGridClient({
 	 ros : ros,
@@ -425,11 +779,24 @@
 	 continues: true
 	 });
 	 
+	 var mb_gridClient = new ROS2D.OccupancyGridClient({
+	  ros : ros,
+	  rootObject : mb_viewer.scene,
+	  continues: true
+	  });
+	 
 	gridClient.on('change', function(){
 	startTime = new Date()
 	viewer.scaleToDimensions(gridClient.currentGrid.width, gridClient.currentGrid.height);
 	viewer.shift(gridClient.currentGrid.pose.position.x, gridClient.currentGrid.pose.position.y);
 	});
+	
+	mb_gridClient.on('change', function(){
+	startTime = new Date()
+	mb_viewer.scaleToDimensions(mb_gridClient.currentGrid.width, mb_gridClient.currentGrid.height);
+	mb_viewer.shift(mb_gridClient.currentGrid.pose.position.x, mb_gridClient.currentGrid.pose.position.y);
+	});
+	
 	CmdSend.publish(CmdDataOpenMap);
 	}
 	
@@ -449,57 +816,267 @@
 	data:"DeleteMap"
 	}); 
 	
-	function DeleteMap()
+	function delMap()
 	{
 	CmdSend.publish(CmdDataDeleteMap);
 	}
 	/******************删除地图*******************************/
-			function load() {
-				console.log('加载配置');
-			}
+	/******************设置回充*******************************/
+	var CmdDataAutoCharge  = new ROSLIB.Message({
+	 data:"AutoCharge"
+	  });  
+	var CmdDataManCharge  = new ROSLIB.Message({
+	data:"ManCharge"
+	});  
+	
+	function  backClick()
+	{
+		let ele1 = document.getElementById("btb1")
+		let ele2 = document.getElementById("btb2")
+		if(ele1.innerText == " 自动回充" || ele2.innerText == " 自动回充")
+		{
+		var text ='<img src="images/icon7.png"alt=""><img src="images/icon7_on.png"class="on" alt=""> 手动回充'
+		$('#btb1').html(text)
+		$('#btb2').html(text)
+		CmdSend.publish(CmdDataAutoCharge);	
+		}
+		else 
+		{
+		var text ='<img src="images/icon7.png"alt=""><img src="images/icon7_on.png"class="on" alt=""> 自动回充'
+		$('#btb1').html(text)
+		$('#btb2').html(text)
+		CmdSend.publish(CmdDataManCharge);	
+		}
+	}
+	/******************设置回充*******************************/
+	/********************登录********************************/
+	function login()
+	{
+		ros = new ROSLIB.Ros({
+		url : 'ws://192.168.2.66:9090'  //43 66
+		//url : 'ws://192.168.ZZ090'
+		});
+		 
+		 ros.on('connection', function() {
+		 console.log('Connected to websocket server.');
+		 });
+		  
+		 ros.on('error', function(error) {
+		 console.log('Error connecting to websocket server: ', error);
+		 });
+		  
+		 ros.on('close', function() {
+		 console.log('Connection to websocket server closed.');
+		 });
+	}
+	/********************登录********************************/
+	/*****************设置初始点*****************************/
+	var CmdDataSetInitPose  = new ROSLIB.Message({
+	data:"SetInitPose"
+	}); 
+	var PreConditionNav = 0;
+	var PreConditionViewPose = 0;
+	function init()
+	{
+	CmdSend.publish(CmdDataSetInitPose);
+	if (PreConditionNav == 1 && PreConditionViewPose == 1){
+	document.getElementById("SetPointLog1").innerHTML = ("设置初始点成功！");
+	document.getElementById("SetPointLog2").innerHTML = ("设置初始点成功！");}
+	else if(PreConditionNav == 1 && PreConditionViewPose == 0){
+	document.getElementById("SetPointLog1").innerHTML = ("请先开启查看位置！");
+	document.getElementById("SetPointLog2").innerHTML = ("请先开启查看位置！");}
+	else if(PreConditionNav == 0 && PreConditionViewPose == 1){
+	document.getElementById("SetPointLog1").innerHTML = ("请先开启导航！");
+	document.getElementById("SetPointLog2").innerHTML = ("请先开启导航！");}
+	else if(PreConditionNav == 0 && PreConditionViewPose == 0){
+	document.getElementById("SetPointLog1").innerHTML = ("请先开启查看位置和开启导航！");
+	document.getElementById("SetPointLog2").innerHTML = ("请先开启查看位置和开启导航！");}
+	}
+	/*****************设置初始点*****************************/
+	/*****************添加目标点*****************************/
+	function setInnerText(element,content){
+	   if(typeof(element.innerText)==='string'){
+	     element.innerText=content;
+	   }else{
+	    element.textContent=content;
+	  }//部分浏览器支持元素的innerText,部分仅仅使用textContent
+	    }
 		
+	var CmdDataAddGoal  = new ROSLIB.Message({
+	data:"AddGoal"
+	});  
+	var GoalNum = 1;
+	var ToGoalList = [];
+	var WaitTimeList = [];
+	var GoalNameList = [];
+	
+	function addPoint2(){
+		$('.aside-point').show()
+		CmdSend.publish(CmdDataAddGoal);
+		document.getElementById("SetPointLog2").innerHTML = ("添加目标点"+GoalNum.toString()+"成功！");
+		document.getElementById("SetPointLog1").innerHTML = ("添加目标点"+GoalNum.toString()+"成功！");
+		var ul = document.createElement('ul');
+		//var ulr = document.createElement('ulr');
+		//var box=document.getElementById('box');
+		var boxr=document.getElementById('boxr');
+		boxr.appendChild(ul);
+		//boxr.appendChild(ul);
+		//boxr.appendChild(ulr);
+		if (document.getElementById("inputname2").value != "目标点"+GoalNum)
+		{
+		var data = "目标点"+GoalNum+document.getElementById("inputname2").value;
+		GoalNameList.push(data);
+		}
+		else if(document.getElementById("inputname1").value != "目标点"+GoalNum)
+		{
+		var data = "目标点"+GoalNum+document.getElementById("inputname1").value;
+		GoalNameList.push(data);	
+		}
+		else
+		{
+		var data = "目标点"+GoalNum+"    ";
+		GoalNameList.push("目标点"+GoalNum);
+		}
 		
-			function update() {
-				console.log('更新配置');
-			}
-		
-			function reset() {
-				console.log('重置配置');
-			}
-		
-			function backClick() {
-				console.log('手动回充');
-			}
+		if (document.getElementById("inputtime2").value != "0" )
+		{
+		data = data + "    "+"等待时间："+document.getElementById("inputtime2").value;
+		WaitTimeList.push(document.getElementById("inputtime2").value);
+		}
+		else if(document.getElementById("inputtime1").value != "0" )
+		{
+		data = data + "    "+"等待时间："+document.getElementById("inputtime1").value;
+		WaitTimeList.push(document.getElementById("inputtime1").value);
+		}	
+		else
+		{
+		data = data + "    "+"等待时间：0";
+		WaitTimeList.push('0');
+		}
+		//console.log(WaitTimeList);
+		var li = document.createElement('li');
+		ul.appendChild(li);
+		//ulr.appendChild(li);
+		setInnerText(li, data);
+		ToGoalList.push("0");
+		var lis = document.getElementsByTagName('li');
+		var num = lis.length;
+		 
+		for(let i=0; i<num; i++){	 
+			lis[i].onclick=function(){
 				
-			function saveMap() {
-				console.log('保存地图');
+				//lis[i].style.backgroundColor = 'green';
+				if(lis[i].style.backgroundColor == 'red'){
+				    lis[i].style.backgroundColor = '';
+					ToGoalList[i] = '0';
+				}else{
+				    lis[i].style.backgroundColor = 'red';
+					ToGoalList[i] = "1";
+				}
+					console.log(ToGoalList);	
 			}
+		}
+		document.getElementById("inputname2").value = "目标点"+(GoalNum+1);
+		document.getElementById("inputtime2").value = "0";
+		document.getElementById("inputname1").value = "目标点"+(GoalNum+1);
+		document.getElementById("inputtime1").value = "0";
+		GoalNum += 1;
+	}
+	
+	
+	function addPoint(){
+		$('.aside-point').show()
+		CmdSend.publish(CmdDataAddGoal);
+		document.getElementById("SetPointLog2").innerHTML = ("添加目标点"+GoalNum.toString()+"成功！");
+		document.getElementById("SetPointLog1").innerHTML = ("添加目标点"+GoalNum.toString()+"成功！");
+		var ul = document.createElement('ul');
+		//var ulr = document.createElement('ulr');
+		var box=document.getElementById('box');
+		//var boxr=document.getElementById('boxr');
+		box.appendChild(ul);
+		//boxr.appendChild(ul);
+		//boxr.appendChild(ulr);
+		if (document.getElementById("inputname2").value != "目标点"+GoalNum)
+		{
+		var data = "目标点"+GoalNum+document.getElementById("inputname2").value;
+		GoalNameList.push(data);
+		}
+		else if(document.getElementById("inputname1").value != "目标点"+GoalNum)
+		{
+		var data = "目标点"+GoalNum+document.getElementById("inputname1").value;
+		GoalNameList.push(data);	
+		}
+		else
+		{
+		var data = "目标点"+GoalNum+"    ";
+		GoalNameList.push("目标点"+GoalNum);
+		}
 		
-			function delMap() {
-				console.log('删除地图');
+		if (document.getElementById("inputtime2").value != "0" )
+		{
+		data = data + "    "+"等待时间："+document.getElementById("inputtime2").value;
+		WaitTimeList.push(document.getElementById("inputtime2").value);
+		}
+		else if(document.getElementById("inputtime1").value != "0" )
+		{
+		data = data + "    "+"等待时间："+document.getElementById("inputtime1").value;
+		WaitTimeList.push(document.getElementById("inputtime1").value);
+		}	
+		else
+		{
+		data = data + "    "+"等待时间：0";
+		WaitTimeList.push('0');
+		}
+		//console.log(WaitTimeList);
+		var li = document.createElement('li');
+		ul.appendChild(li);
+		//ulr.appendChild(li);
+		setInnerText(li, data);
+		ToGoalList.push("0");
+		var lis = document.getElementsByTagName('li');
+		var num = lis.length;
+		 
+		for(let i=0; i<num; i++){	 
+			lis[i].onclick=function(){
+				
+				//lis[i].style.backgroundColor = 'green';
+				if(lis[i].style.backgroundColor == 'red'){
+				    lis[i].style.backgroundColor = '';
+					ToGoalList[i] = '0';
+				}else{
+				    lis[i].style.backgroundColor = 'red';
+					ToGoalList[i] = "1";
+				}
+					console.log(ToGoalList);	
 			}
-						
-		
-			function init() {
-				console.log('初始点设置');
-			}
-		
-			function addPoint() {
-				$('.aside-point').show()
-			}
-		
-			function setNum() {
-				console.log('设置次数');
-			}
-		
-			function confirm() {
-				console.log('确定');
-			}
-			
-			$('#robo').click(function(){
+		}
+		document.getElementById("inputname2").value = "目标点"+(GoalNum+1);
+		document.getElementById("inputtime2").value = "0";
+		document.getElementById("inputname1").value = "目标点"+(GoalNum+1);
+		document.getElementById("inputtime1").value = "0";
+		GoalNum += 1;
+	}
+	/*****************添加目标点*****************************/
+	/******************设置次数*****************************/
+	var RunTimesList;
+	function setNum()
+	{	if(document.getElementById("inputruntimes2").value != "0")
+		var data = document.getElementById("inputruntimes2").value;
+		if(document.getElementById("inputruntimes1").value != "0")
+		var data = document.getElementById("inputruntimes1").value;
+		RunTimesList=data+","+data;
+		console.log("RunTimeSet:"+RunTimesList);
+		document.getElementById("SetPointLog2").innerHTML = ("设置运行次数:"+data.toString()+"  成功！");
+		document.getElementById("SetPointLog1").innerHTML = ("设置运行次数:"+data.toString()+"  成功！");
+	}
+	/******************设置次数*****************************/
+				
+			function select(){
 				$('.aside-info').toggle()
 				$('.aside-left').toggleClass('open')
-			})
+			}
+			
+		
 		</script>
 		<title></title>
 		<link href="fonts/iconfont.css" rel="stylesheet" type="text/css" />
@@ -510,12 +1087,18 @@
 		<div class="warrper">
 			<div class="head">
 				<div class="head_right">
+					<div class="SetPointLog">
+						<div class = "RunTime-Text" id = "SetPointLog2"></div>
+					</div>
 					<div class = "RunTime">
 						<div class = "RunTime-Text" id = "RunTime1"></div>
 					</div>
 					<button onclick="openFullscreen()" class="btn">
 						<i class="iconfont icon-quanping"></i>
 					</button>
+					<div class="liquid">
+						<div class = "RunTime-Text" id = "Liquid1"></div>
+					</div>
 					<div class="temp">
 						<div id = "Temperature1"></div>
 					</div>
@@ -536,11 +1119,15 @@
 					<div class="aside-search">
 						<input type="text" class="form-control" placeholder="请输入机器人IP">
 					</div>
-					<div class="aside-links">
-						<a href="" class=""><i class="iconfont icon-denglu-copy"></i> 登录</a>
-						<a href="javascript:;" id="robo">Robo2</a>
+					<div class="aside-item__bd">
+						<!--<a href="" class=""><i class="iconfont icon-denglu-copy"></i> 登录</a>-->
+						<button onclick="login()" id = "login" class="btn"><i class="iconfont icon-denglu-copy"></i> 登录</button>
+						<div style="margin-top: 20px">
+						<button onclick="select()" id = "robo" class="btn"><i class="iconfont icon-denglu-copy"></i> Robo</button>
+						<!--<a href="javascript:;" id="robo">Robo2</a>-->
+						</div>
 					</div>
-					<div class="aside-info">
+					<div class="aside-info" style="display: none;">
 						<p><span>机器编号</span>: 1101234</p>
 						<p><span>电池容量</span>: 50000</p>
 						<p><span>外形尺寸</span>: 720*690*110cm</p>
@@ -575,7 +1162,7 @@
 								打开省电模式</button>
 						</div>
 						<div class="col-6">
-							<button class="btn" onclick="backClick()"><img src="images/icon7.png" alt=""><img src="images/icon7_on.png" class="on" alt=""> 手动回充</button>
+							<button class="btn" id = "btb1" onclick="backClick()"><img src="images/icon7.png" alt=""><img src="images/icon7_on.png" class="on" alt=""> 手动回充</button>
 						</div>
 						<div class="col-6">
 							<button class="btn" onclick="viewClick()"><img src="images/icon8.png" alt=""><img src="images/icon8_on.png" class="on" alt=""> 查看位置</button>
@@ -612,7 +1199,7 @@
 					<div class="aside-item__bd">
 						<div class="form-row">
 							<div class="form-item flex_bd">
-								<input type="text" class="form-control" placeholder="目标点1">
+								<input id = "inputname2" type="text" class="form-control" value="目标点1" placeholder="">
 							</div>
 							<div style="width: 130px;margin-left: 20px;">
 								<button class="btn" onclick="addPoint()">目标点添加</button>
@@ -627,7 +1214,7 @@
 					<div class="aside-item__bd">
 						<div class="form-row">
 							<div class="form-item flex_bd">
-								<input type="text" class="form-control" placeholder="0">
+								<input id = "inputtime2" type="text" class="form-control" value="0" placeholder="">
 								<span class="unit">S</span>
 							</div>
 						</div>
@@ -640,7 +1227,7 @@
 					<div class="aside-item__bd">
 						<div class="form-row">
 							<div class="form-item flex_bd">
-								<input type="text" class="form-control" placeholder="0">
+								<input type="text" id = "inputruntimes2" class="form-control" placeholder="0">
 								<span class="unit">次</span>
 							</div>
 							<div style="width: 130px;margin-left: 20px;">
@@ -649,28 +1236,8 @@
 						</div>
 					</div>
 				</div>
-				<div class="aside-point">
-					<h4>添加目标点6成功</h4>
-					<p>目标点1 等待时间：0S</p>
-					<p>目标点2 等待时间：0S</p>
-					<p>目标点3 等待时间：0S</p>
-					<p>目标点4 等待时间：0S</p>
-					<p>目标点5 等待时间：0S</p>
-					<p>目标点6 等待时间：0S</p>
-					<h4>添加目标点6成功</h4>
-					<p>目标点1 等待时间：0S</p>
-					<p>目标点2 等待时间：0S</p>
-					<p>目标点3 等待时间：0S</p>
-					<p>目标点4 等待时间：0S</p>
-					<p>目标点5 等待时间：0S</p>
-					<p>目标点6 等待时间：0S</p>
-					<h4>添加目标点6成功</h4>
-					<p>目标点1 等待时间：0S</p>
-					<p>目标点2 等待时间：0S</p>
-					<p>目标点3 等待时间：0S</p>
-					<p>目标点4 等待时间：0S</p>
-					<p>目标点5 等待时间：0S</p>
-					<p>目标点6 等待时间：0S</p>
+				<div id = "box" class="aside-point">
+
 				</div>
 			</div>
 			<div class="bottom">
@@ -721,12 +1288,18 @@
 		<div class="mb-warrper">
 			<div class="mb-head">
 				<div class="head_right">
+					<div class="SetPointLog">
+						<div class = "RunTime-Text" id = "SetPointLog1"></div>
+					</div>
 					<div class = "RunTime">
 						<div class = "RunTime-Text" id = "RunTime2"></div>
 					</div>
 					<button onclick="openFullscreen()" class="btn">
 						<i class="iconfont icon-quanping"></i>
 					</button>
+					<div class="liquid">
+						<div style="margin-right: 10px;" id = "Liquid2"></div>
+					</div>
 					<div class="temp">
 						<div id = "Temperature2"></div>
 					</div>
@@ -745,10 +1318,10 @@
 						<img src="images/mb_logo.png" alt="">
 					</div>
 					<div class="mb-group">
-						<button class="btn" onclick="load()"><img src="images/icon1.png" alt=""><img src="images/icon1_on.png" class="on" alt=""> 加载配置</button>
+						<button class="btn" data-toggle="modal" data-target="#modal2" onclick="load2()"><img src="images/icon1.png" alt=""><img src="images/icon1_on.png" class="on" alt=""> 加载配置</button>
 						<button class="btn" onclick="update()"><img src="images/icon3.png" alt=""><img src="images/icon3_on.png" class="on" alt=""> 更新配置</button>
 						<button class="btn" onclick="reset()"><img src="images/icon5.png" alt=""><img src="images/icon5_on.png" class="on" alt=""> 重置配置</button>
-						<button class="btn" onclick="backClick()"><img src="images/icon7.png" alt=""><img src="images/icon7_on.png" class="on" alt=""> 手动回充</button>
+						<button class="btn" id="btb2" onclick="backClick()"><img src="images/icon7.png" alt=""><img src="images/icon7_on.png" class="on" alt=""> 手动回充</button>
 						<button class="btn" onclick="viewClick()"><img src="images/icon8.png" alt=""><img src="images/icon8_on.png" class="on" alt=""> 查看位置</button>
 					</div>
 					<div class="mb-item">
@@ -779,10 +1352,12 @@
 							</div>
 						</div>
 					</div>
-					<div class="mb-map" id="map">
-						<img src="images/map.png" alt="">
+					<div class="mb-map">
+						<!--<img src="images/map.png" alt="">-->
+						<div id="mb-map" style="width: 300px;margin-left:43%;"></div>
+						<div id="mb-3dmap" style="width: 300px;margin-left:0%;"></div>
 						<div class="mb-silde">
-							<div class="mb-block">
+							<div class="mb-block"  id="zone_joystick">
 							</div>
 						</div>
 					</div>
@@ -794,7 +1369,7 @@
 										目标点命名
 									</div>
 									<div class="mb-item__bd">
-										<input type="text" class="form-control" placeholder="目标点1">
+										<input type="text" id ="inputname1" class="form-control" value="目标点1" placeholder="">
 									</div>
 								</div>
 							</div>
@@ -805,7 +1380,7 @@
 									</div>
 									<div class="mb-item__bd">
 										<div class="mb-cell">
-											<input type="text" class="form-control" value="0" placeholder="">
+											<input type="text" id = "inputtime1" class="form-control" value="0" placeholder="">
 											<span class="unit">S</span>
 										</div>
 									</div>
@@ -819,7 +1394,7 @@
 									<div class="mb-item__bd">
 										<div class="mb-flex">
 											<div class="mb-cell flex_bd">
-												<input type="text" class="form-control" value="0" placeholder="">
+												<input type="text" id = "inputruntimes1" class="form-control" value="0" placeholder="">
 												<span class="unit">次</span>
 											</div>
 											<button class="btn" onclick="setNum()">设置次数</button>
@@ -854,7 +1429,7 @@
 							目标点
 						</div>
 						<div class="mb-item__ft">
-							<button class="btn" data-toggle="modal" data-target="#modal2">目标点添加</button>
+							<button class="btn" onclick="addPoint2()" data-toggle="modal" data-target="#modal2">目标点添加</button>
 						</div>
 					</div>
 				</div>
@@ -899,14 +1474,8 @@
 					<div class="modal-body">
 						<div class="robot-modal-body">
 							<div class="robot-modal-info">
-								<div class="robot-point">
-									<h4>添加目标点6成功</h4>
-									<p>目标点1 等待时间：0S</p>
-									<p>目标点2 等待时间：0S</p>
-									<p>目标点3 等待时间：0S</p>
-									<p>目标点4 等待时间：0S</p>
-									<p>目标点5 等待时间：0S</p>
-									<p>目标点6 等待时间：0S</p>
+								<div id = "boxr" class="robot-point">
+
 								</div>
 							</div>
 						</div>
@@ -914,8 +1483,5 @@
 				</div>
 			</div>
 		</div>
-
-		
-	
 	</body>
 </html>
